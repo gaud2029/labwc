@@ -176,6 +176,7 @@ struct rcxml {
 	int snap_overlay_delay_outer;
 	bool snap_top_maximize;
 	enum tiling_events_mode snap_tiling_events_mode;
+	int snap_grid_size;
 
 	enum resize_indicator_mode resize_indicator;
 	bool resize_draw_contents;

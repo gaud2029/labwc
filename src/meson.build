@@ -24,6 +24,7 @@ labwc_sources = files(
   'session-lock.c',
   'show-desktop.c',
   'snap-constraints.c',
+  'snap-grid.c',
   'snap.c',
   'tearing.c',
   'theme.c',

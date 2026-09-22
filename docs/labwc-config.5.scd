@@ -588,6 +588,15 @@ extending outward from the snapped edge.
 
 	The default is "always".
 
+*<snapping><grid><size>*
+	Align windows to a grid of this many pixels during interactive moves
+	and resizes. The outer frame of the window, including server-side
+	decorations, is aligned to the grid, which is anchored at the top-left
+	corner of the window's output. When resizing, only the grabbed edges
+	are aligned. Edge resistance and snapping still take precedence, and
+	clients may further adjust the final size (for example terminals that
+	resize in character cells). Default is 0 (disabled).
+
 ## REGIONS
 
 *<regions><region name="snap-1" x="10%" y="10%" width="80%" height="80%">*

@@ -33,6 +33,7 @@
 #include "menu/menu.h"
 #include "output.h"
 #include "resistance.h"
+#include "snap-grid.h"
 #include "resize-outlines.h"
 #include "ssd.h"
 #include "view.h"
@@ -300,7 +301,8 @@ process_cursor_move(uint32_t time)
 		y = new_geo.y;
 	}
 
-	/* Then apply window & edge resistance */
+	/* Align to the grid, then apply window & edge resistance */
+	snap_grid_move_apply(view, &x, &y);
 	resistance_move_apply(view, &x, &y);
 
 	view_move(view, x, y);
@@ -355,6 +357,7 @@ process_cursor_resize(uint32_t time)
 		new_view_geo.width = server.grab_box.width + dx;
 	}
 
+	snap_grid_resize_apply(view, &new_view_geo);
 	resistance_resize_apply(view, &new_view_geo);
 	view_adjust_size(view, &new_view_geo.width, &new_view_geo.height);
 
