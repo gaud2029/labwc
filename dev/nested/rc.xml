@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<labwc_config>
+  <snapping>
+    <!-- Large grid so the effect is obvious while testing -->
+    <grid><size>20</size></grid>
+  </snapping>
+</labwc_config>

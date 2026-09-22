@@ -1,0 +1,25 @@
+# Local build of the snap-to-grid labwc fork; replaces the distro labwc.
+# Usage: cd dev/pkg && makepkg -si     Revert: sudo pacman -S labwc
+pkgname=labwc-snapgrid
+pkgver=0.20.2
+pkgrel=1
+pkgdesc='labwc with snap-to-grid for interactive move/resize'
+arch=('x86_64')
+url='https://github.com/labwc/labwc'
+license=('GPL-2.0-only')
+depends=('cairo' 'glib2' 'glibc' 'libinput' 'libpng' 'librsvg' 'libsfdo'
+         'libwlroots-0.20.so' 'libxcb' 'libxkbcommon' 'libxml2' 'pango'
+         'pixman' 'seatd' 'ttf-font' 'wayland')
+makedepends=('meson' 'ninja' 'scdoc' 'wayland-protocols' 'xorg-xwayland')
+optdepends=('bemenu: default launcher via Alt+F3')
+provides=("labwc=$pkgver")
+conflicts=('labwc')
+
+build() {
+  arch-meson "$startdir/../.." build
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
