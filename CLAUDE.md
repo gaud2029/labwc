@@ -16,6 +16,24 @@ frame to an N-pixel grid during interactive move/resize.
 Keep the feature itself in a single commit so it rebases cleanly onto new
 labwc releases (and could be sent upstream).
 
+## angled-corner (branch `angled-corner`, on top of `snap-to-grid`)
+
+`<theme><cornerStyle>angled</cornerStyle>` cuts the titlebar's top corners at
+45 degrees, `cornerRadius` pixels along each edge, instead of rounding them;
+`<corners><topLeft style="" radius=""/><topRight .../></corners>` sets each
+corner on its own. The title and outermost buttons start past the cut
+(`ssd_get_corner_inset()`), except when the corners are squared.
+- Code: `rounded_rect()` (corner buffers) and `round_corner_button()`
+  (clipping the outermost title buttons) in `src/theme.c`;
+  `ssd_get_corner_inset()` in `src/ssd/ssd.c`, used by the layout in
+  `src/ssd/ssd-titlebar.c`
+- Config: `rc.corners[]` (by `enum lab_corner`) in `include/config/rcxml.h`,
+  resolved from the `cornerRadius`/`cornerStyle` shorthands in
+  `post_processing()` of `src/config/rcxml.c`
+- Next: the bottom corners, with the part of the window outside the cut
+  filled in the border color (bottom borders are plain rects today, in
+  `src/ssd/ssd-border.c`).
+
 ## Build
     meson setup build        # once
     ninja -C build
