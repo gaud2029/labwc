@@ -130,4 +130,11 @@ enum cycle_app_id_filter {
 	CYCLE_APP_ID_CURRENT,
 };
 
+/* The titlebar corners that can be rounded or angled */
+enum lab_corner {
+	LAB_CORNER_TOP_LEFT,
+	LAB_CORNER_TOP_RIGHT,
+	LAB_CORNER_COUNT
+};
+
 #endif /* LABWC_CONFIG_TYPES_H */

@@ -668,6 +668,18 @@ extending outward from the snapped edge.
 *<theme><cornerRadius>*
 	The radius of server side decoration top corners. Default is 8.
 
+*<theme><cornerStyle>* [rounded|angled]
+	Shape of the server side decoration top corners. *rounded* draws them
+	as arcs of *cornerRadius*. *angled* cuts them off at 45 degrees
+	instead, *cornerRadius* pixels along each edge, and keeps the title or
+	outermost button clear of the cut. Default is rounded.
+
+*<theme><corners><topLeft style="" radius="" />*++
+*<theme><corners><topRight style="" radius="" />*
+	Set the style (*rounded* or *angled*) and radius of one top corner.
+	Either attribute can be left out; the corner then takes it from
+	*cornerStyle* or *cornerRadius*.
+
 *<theme><keepBorder>* [yes|no]
 	Even when disabling server side decorations via ToggleDecorations,
 	keep a small border (and resize area) around the window. Default is yes.

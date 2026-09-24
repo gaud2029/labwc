@@ -44,6 +44,15 @@
       <showTitle>yes</showTitle>
     </titlebar>
     <cornerRadius>8</cornerRadius>
+    <!-- rounded or angled (cut off at 45 degrees) -->
+    <cornerStyle>rounded</cornerStyle>
+    <!--
+      Each top corner can override cornerStyle and cornerRadius:
+      <corners>
+        <topLeft style="angled" radius="16" />
+        <topRight style="angled" radius="8" />
+      </corners>
+    -->
     <keepBorder>yes</keepBorder>
     <maximizedDecoration>titlebar</maximizedDecoration>
     <dropShadows>no</dropShadows>

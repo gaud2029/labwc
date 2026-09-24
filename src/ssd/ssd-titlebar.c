@@ -23,6 +23,16 @@ static void set_squared_corners(struct ssd *ssd, bool enable);
 static void set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool enable);
 static void update_visible_buttons(struct ssd *ssd);
 
+/* Room kept free next to @corner, unless the corners are squared */
+static int
+corner_inset(struct ssd *ssd, enum lab_corner corner)
+{
+	if (ssd->state.was_maximized || ssd->state.was_squared) {
+		return 0;
+	}
+	return ssd_get_corner_inset(corner);
+}
+
 void
 ssd_titlebar_create(struct ssd *ssd)
 {
@@ -81,7 +91,8 @@ ssd_titlebar_create(struct ssd *ssd)
 			LAB_NODE_TITLE, view, /*data*/ NULL);
 
 		/* Buttons */
-		int x = theme->window_titlebar_padding_width;
+		int x = theme->window_titlebar_padding_width
+			+ corner_inset(ssd, LAB_CORNER_TOP_LEFT);
 
 		/* Center vertically within titlebar */
 		int y = (theme->titlebar_height - theme->window_button_height) / 2;
@@ -98,7 +109,9 @@ ssd_titlebar_create(struct ssd *ssd)
 			x += theme->window_button_width + theme->window_button_spacing;
 		}
 
-		x = width - theme->window_titlebar_padding_width + theme->window_button_spacing;
+		x = width - theme->window_titlebar_padding_width
+			- corner_inset(ssd, LAB_CORNER_TOP_RIGHT)
+			+ theme->window_button_spacing;
 		for (int b = rc.nr_title_buttons_right - 1; b >= 0; b--) {
 			x -= theme->window_button_width + theme->window_button_spacing;
 			enum lab_node_type type = rc.title_buttons_right[b];
@@ -221,7 +234,9 @@ update_visible_buttons(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
 	struct theme *theme = rc.theme;
-	int width = MAX(view->current.width - 2 * theme->window_titlebar_padding_width, 0);
+	int width = MAX(view->current.width - 2 * theme->window_titlebar_padding_width
+		- corner_inset(ssd, LAB_CORNER_TOP_LEFT)
+		- corner_inset(ssd, LAB_CORNER_TOP_RIGHT), 0);
 	int button_width = theme->window_button_width;
 	int button_spacing = theme->window_button_spacing;
 	int button_count_left = rc.nr_title_buttons_left;
@@ -278,8 +293,10 @@ ssd_titlebar_update(struct ssd *ssd)
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
 
-	if (ssd->state.was_maximized != maximized
-			|| ssd->state.was_squared != squared) {
+	/* Squaring the corners drops the room kept free next to them */
+	bool corners_changed = ssd->state.was_maximized != maximized
+		|| ssd->state.was_squared != squared;
+	if (corners_changed) {
 		set_squared_corners(ssd, maximized || squared);
 		if (ssd->state.was_maximized != maximized) {
 			set_alt_button_icon(ssd, LAB_NODE_BUTTON_MAXIMIZE, maximized);
@@ -299,7 +316,7 @@ ssd_titlebar_update(struct ssd *ssd)
 		ssd->state.was_omnipresent = view->visible_on_all_workspaces;
 	}
 
-	if (width == ssd->state.geometry.width) {
+	if (width == ssd->state.geometry.width && !corners_changed) {
 		return;
 	}
 
@@ -316,7 +333,8 @@ ssd_titlebar_update(struct ssd *ssd)
 		wlr_scene_buffer_set_dest_size(subtree->bar,
 			MAX(width - bg_offset * 2, 0), theme->titlebar_height);
 
-		x = theme->window_titlebar_padding_width;
+		x = theme->window_titlebar_padding_width
+			+ corner_inset(ssd, LAB_CORNER_TOP_LEFT);
 		struct ssd_button *button;
 		wl_list_for_each(button, &subtree->buttons_left, link) {
 			wlr_scene_node_set_position(button->node, x, y);
@@ -327,7 +345,9 @@ ssd_titlebar_update(struct ssd *ssd)
 		wlr_scene_node_set_position(&subtree->corner_right->node,
 			x, -rc.theme->border_width);
 
-		x = width - theme->window_titlebar_padding_width + theme->window_button_spacing;
+		x = width - theme->window_titlebar_padding_width
+			- corner_inset(ssd, LAB_CORNER_TOP_RIGHT)
+			+ theme->window_button_spacing;
 		wl_list_for_each(button, &subtree->buttons_right, link) {
 			x -= theme->window_button_width + theme->window_button_spacing;
 			wlr_scene_node_set_position(button->node, x, y);
@@ -416,8 +436,8 @@ get_title_offsets(struct ssd *ssd, int *offset_left, int *offset_right)
 	int button_width = rc.theme->window_button_width;
 	int button_spacing = rc.theme->window_button_spacing;
 	int padding_width = rc.theme->window_titlebar_padding_width;
-	*offset_left = padding_width;
-	*offset_right = padding_width;
+	*offset_left = padding_width + corner_inset(ssd, LAB_CORNER_TOP_LEFT);
+	*offset_right = padding_width + corner_inset(ssd, LAB_CORNER_TOP_RIGHT);
 
 	struct ssd_button *button;
 	wl_list_for_each(button, &subtree->buttons_left, link) {

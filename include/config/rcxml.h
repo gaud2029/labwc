@@ -110,7 +110,18 @@ struct rcxml {
 	enum lab_node_type title_buttons_right[TITLE_BUTTONS_MAX];
 	int nr_title_buttons_right;
 
+	/* <cornerRadius> and <cornerStyle>: both top corners at once */
 	int corner_radius;
+	bool corner_angled;
+	/*
+	 * Each top corner, indexed by enum lab_corner. <corners><topLeft> and
+	 * <topRight> set them; post-processing fills in what they left unset
+	 * (-1) from the two above. Use these, not the two above, when drawing.
+	 */
+	struct {
+		int radius;
+		int angled;
+	} corners[LAB_CORNER_COUNT];
 	bool show_title;
 	bool title_layout_loaded;
 	bool ssd_keep_border;

@@ -1092,6 +1092,20 @@ set_hdr_mode(const char *str, enum render_bit_depth *variable)
 }
 
 /* Returns true if the node's children should also be traversed */
+
+/* <style> of one of <corners>: 1 for angled, 0 for rounded */
+static void
+set_corner_style(const char *content, int *angled)
+{
+	if (!strcasecmp(content, "rounded")) {
+		*angled = 0;
+	} else if (!strcasecmp(content, "angled")) {
+		*angled = 1;
+	} else {
+		wlr_log(WLR_ERROR, "invalid corner style '%s'", content);
+	}
+}
+
 static bool
 entry(xmlNode *node, char *nodename, char *content)
 {
@@ -1192,6 +1206,22 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.show_title = parse_bool(content, true);
 	} else if (!strcmp(nodename, "cornerradius.theme")) {
 		rc.corner_radius = atoi(content);
+	} else if (!strcasecmp(nodename, "cornerStyle.theme")) {
+		if (!strcasecmp(content, "rounded")) {
+			rc.corner_angled = false;
+		} else if (!strcasecmp(content, "angled")) {
+			rc.corner_angled = true;
+		} else {
+			wlr_log(WLR_ERROR, "invalid cornerStyle '%s'", content);
+		}
+	} else if (!strcasecmp(nodename, "radius.topLeft.corners.theme")) {
+		rc.corners[LAB_CORNER_TOP_LEFT].radius = atoi(content);
+	} else if (!strcasecmp(nodename, "radius.topRight.corners.theme")) {
+		rc.corners[LAB_CORNER_TOP_RIGHT].radius = atoi(content);
+	} else if (!strcasecmp(nodename, "style.topLeft.corners.theme")) {
+		set_corner_style(content, &rc.corners[LAB_CORNER_TOP_LEFT].angled);
+	} else if (!strcasecmp(nodename, "style.topRight.corners.theme")) {
+		set_corner_style(content, &rc.corners[LAB_CORNER_TOP_RIGHT].angled);
 	} else if (!strcasecmp(nodename, "keepBorder.theme")) {
 		set_bool(content, &rc.ssd_keep_border);
 	} else if (!strcasecmp(nodename, "maximizedDecoration.theme")) {
@@ -1529,6 +1559,11 @@ rcxml_init(void)
 	rc.title_layout_loaded = false;
 	rc.ssd_keep_border = true;
 	rc.corner_radius = 8;
+	rc.corner_angled = false;
+	for (int i = 0; i < LAB_CORNER_COUNT; i++) {
+		rc.corners[i].radius = -1;
+		rc.corners[i].angled = -1;
+	}
 	rc.shadows_enabled = false;
 	rc.shadows_on_tiled = false;
 
@@ -1780,6 +1815,16 @@ load_default_window_switcher_fields(void)
 static void
 post_processing(void)
 {
+	/* Per-corner settings win over <cornerRadius>/<cornerStyle> */
+	for (int i = 0; i < LAB_CORNER_COUNT; i++) {
+		if (rc.corners[i].radius < 0) {
+			rc.corners[i].radius = rc.corner_radius;
+		}
+		if (rc.corners[i].angled < 0) {
+			rc.corners[i].angled = rc.corner_angled;
+		}
+	}
+
 	if (!wl_list_length(&rc.keybinds)) {
 		wlr_log(WLR_INFO, "load default key bindings");
 		load_default_key_bindings();

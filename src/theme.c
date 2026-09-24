@@ -9,6 +9,7 @@
 #include "theme.h"
 #include <assert.h>
 #include <cairo.h>
+#include <math.h>
 #include <drm_fourcc.h>
 #include <glib.h>
 #include <stdbool.h>
@@ -54,6 +55,8 @@ struct rounded_corner_ctx {
 	cairo_pattern_t *fill_pattern;
 	float *border_color;
 	enum rounded_corner corner;
+	/* A 45 degree cut instead of an arc */
+	bool angled;
 };
 
 #define zero_array(arr) memset(arr, 0, sizeof(arr))
@@ -91,9 +94,12 @@ draw_hover_overlay_on_button(cairo_t *cairo, int w, int h)
 	cairo_fill(cairo);
 }
 
-/* Round the buffer for the leftmost button in the titlebar */
+/*
+ * Round (or cut) the buffer for the outermost button on the side of @corner,
+ * drawn as if it were the leftmost one
+ */
 static void
-round_left_corner_button(cairo_t *cairo, int w, int h)
+round_corner_button(cairo_t *cairo, int w, int h, enum lab_corner corner)
 {
 	/*
 	 * Position of the topleft corner of the titlebar relative to the
@@ -102,10 +108,25 @@ round_left_corner_button(cairo_t *cairo, int w, int h)
 	double x = -rc.theme->window_titlebar_padding_width;
 	double y = -(rc.theme->titlebar_height - rc.theme->window_button_height) / 2;
 
-	double r = rc.corner_radius - (double)rc.theme->border_width / 2.0;
+	int radius = rc.corners[corner].radius;
+	double border_width = rc.theme->border_width;
+	double r = radius - border_width / 2.0;
 
 	cairo_new_sub_path(cairo);
-	cairo_arc(cairo, x + r, y + r, r, deg * 180, deg * 270);
+	if (rc.corners[corner].angled) {
+		/*
+		 * Along the middle of the diagonal border, see rounded_rect().
+		 * The button sits past the corner inset, and the corner buffer
+		 * starts outside the border.
+		 */
+		x -= ssd_get_corner_inset(corner) + border_width;
+		y -= border_width;
+		double c = radius + border_width * sqrt(2.0) / 2.0;
+		cairo_move_to(cairo, x, y + c);
+		cairo_line_to(cairo, x + c, y);
+	} else {
+		cairo_arc(cairo, x + r, y + r, r, deg * 180, deg * 270);
+	}
 	cairo_line_to(cairo, w, y);
 	cairo_line_to(cairo, w, h);
 	cairo_line_to(cairo, x, h);
@@ -116,17 +137,24 @@ round_left_corner_button(cairo_t *cairo, int w, int h)
 	cairo_fill(cairo);
 }
 
+/* Round the buffer for the leftmost button in the titlebar */
+static void
+round_left_corner_button(cairo_t *cairo, int w, int h)
+{
+	round_corner_button(cairo, w, h, LAB_CORNER_TOP_LEFT);
+}
+
 /* Round the buffer for the rightmost button in the titlebar */
 static void
 round_right_corner_button(cairo_t *cairo, int w, int h)
 {
 	/*
 	 * Horizontally flip the cairo context so we can reuse
-	 * round_left_corner_button() for rounding the rightmost button.
+	 * round_corner_button() for rounding the rightmost button.
 	 */
 	cairo_scale(cairo, -1, 1);
 	cairo_translate(cairo, -w, 0);
-	round_left_corner_button(cairo, w, h);
+	round_corner_button(cairo, w, h, LAB_CORNER_TOP_RIGHT);
 }
 
 /*
@@ -1210,13 +1238,23 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	cairo_new_sub_path(cairo);
 	switch (ctx->corner) {
 	case ROUNDED_CORNER_TOP_LEFT:
-		cairo_arc(cairo, r, r, r, 180 * deg, 270 * deg);
+		if (ctx->angled) {
+			cairo_move_to(cairo, 0, r);
+			cairo_line_to(cairo, r, 0);
+		} else {
+			cairo_arc(cairo, r, r, r, 180 * deg, 270 * deg);
+		}
 		cairo_line_to(cairo, w, 0);
 		cairo_line_to(cairo, w, h);
 		cairo_line_to(cairo, 0, h);
 		break;
 	case ROUNDED_CORNER_TOP_RIGHT:
-		cairo_arc(cairo, w - r, r, r, -90 * deg, 0 * deg);
+		if (ctx->angled) {
+			cairo_move_to(cairo, w - r, 0);
+			cairo_line_to(cairo, w, r);
+		} else {
+			cairo_arc(cairo, w - r, r, r, -90 * deg, 0 * deg);
+		}
 		cairo_line_to(cairo, w, h);
 		cairo_line_to(cairo, 0, h);
 		cairo_line_to(cairo, 0, 0);
@@ -1262,6 +1300,44 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	set_cairo_color(cairo, ctx->border_color);
 	cairo_set_line_width(cairo, ctx->line_width);
 	double half_line_width = ctx->line_width / 2.0;
+
+	if (ctx->angled && r) {
+		/*
+		 * Angled corner: stroke the vertical border, the diagonal and
+		 * the horizontal border as one mitered path, so the diagonal
+		 * is as thick as the straight edges. Its outer edge is the line
+		 * x + y = r that the fill above was cut along, so its middle
+		 * meets the middle of the straight edges at j from the corner.
+		 *
+		 *        j
+		 *    <------>XXXXXXX
+		 *         ,/       |
+		 *       ,/         |
+		 *     ,/           |
+		 *    Y             |
+		 *    Y             |
+		 *    Y-------------+
+		 */
+		double j = r + ctx->line_width * (sqrt(2.0) - 1.0) / 2.0;
+		cairo_set_line_join(cairo, CAIRO_LINE_JOIN_MITER);
+		switch (ctx->corner) {
+		case ROUNDED_CORNER_TOP_LEFT:
+			cairo_move_to(cairo, half_line_width, h);
+			cairo_line_to(cairo, half_line_width, j);
+			cairo_line_to(cairo, j, half_line_width);
+			cairo_line_to(cairo, w, half_line_width);
+			break;
+		case ROUNDED_CORNER_TOP_RIGHT:
+			cairo_move_to(cairo, 0, half_line_width);
+			cairo_line_to(cairo, w - j, half_line_width);
+			cairo_line_to(cairo, w - half_line_width, j);
+			cairo_line_to(cairo, w - half_line_width, h);
+			break;
+		}
+		cairo_stroke(cairo);
+		goto out;
+	}
+
 	switch (ctx->corner) {
 	case ROUNDED_CORNER_TOP_LEFT:
 		cairo_move_to(cairo, half_line_width, h);
@@ -1428,14 +1504,17 @@ create_corners(struct theme *theme)
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct rounded_corner_ctx ctx = {
 			.box = &box,
-			.radius = rc.corner_radius,
+			.radius = rc.corners[LAB_CORNER_TOP_LEFT].radius,
 			.line_width = theme->border_width,
 			.fill_pattern = theme->window[active].titlebar_pattern,
 			.border_color = theme->window[active].border_color,
 			.corner = ROUNDED_CORNER_TOP_LEFT,
+			.angled = rc.corners[LAB_CORNER_TOP_LEFT].angled,
 		};
 		theme->window[active].corner_top_left_normal = rounded_rect(&ctx);
 		ctx.corner = ROUNDED_CORNER_TOP_RIGHT;
+		ctx.radius = rc.corners[LAB_CORNER_TOP_RIGHT].radius;
+		ctx.angled = rc.corners[LAB_CORNER_TOP_RIGHT].angled;
 		theme->window[active].corner_top_right_normal = rounded_rect(&ctx);
 	}
 }
@@ -1703,8 +1782,10 @@ post_processing(struct theme *theme)
 		+ 2 * switcher_classic_theme->item_padding_y
 		+ 2 * switcher_classic_theme->item_active_border_width;
 
-	if (rc.corner_radius >= theme->titlebar_height) {
-		rc.corner_radius = theme->titlebar_height - 1;
+	for (int i = 0; i < LAB_CORNER_COUNT; i++) {
+		if (rc.corners[i].radius >= theme->titlebar_height) {
+			rc.corners[i].radius = theme->titlebar_height - 1;
+		}
 	}
 
 	if (rc.resize_corner_range < 0) {

@@ -41,6 +41,8 @@ struct wlr_scene_node;
 struct ssd *ssd_create(struct view *view, bool active);
 struct border ssd_get_margin(const struct ssd *ssd);
 int ssd_get_corner_width(void);
+/* Extra room kept free next to an angled top corner, see ssd.c */
+int ssd_get_corner_inset(enum lab_corner corner);
 void ssd_update_margin(struct ssd *ssd);
 void ssd_set_active(struct ssd *ssd, bool active);
 void ssd_update_title(struct ssd *ssd);

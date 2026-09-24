@@ -8,6 +8,7 @@
 
 #include "ssd.h"
 #include <assert.h>
+#include <math.h>
 #include <strings.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
@@ -189,7 +190,29 @@ int
 ssd_get_corner_width(void)
 {
 	/* ensure a minimum corner width */
-	return MAX(rc.corner_radius, 5);
+	int radius = MAX(rc.corners[LAB_CORNER_TOP_LEFT].radius,
+		rc.corners[LAB_CORNER_TOP_RIGHT].radius);
+	return MAX(radius, 5);
+}
+
+int
+ssd_get_corner_inset(enum lab_corner corner)
+{
+	/*
+	 * An angled corner cuts well into the titlebar, so what sits next to
+	 * it (the title, or the outermost button) starts where the inner edge
+	 * of the diagonal border reaches the top of the titlebar: the corner
+	 * buffer starts border_width outside the titlebar, and the diagonal
+	 * is border_width * sqrt(2) wide horizontally. A rounded corner hugs
+	 * the edge, so it keeps the plain padding.
+	 */
+	if (!rc.corners[corner].angled) {
+		return 0;
+	}
+	double border_width = rc.theme->border_width;
+	double inset = rc.corners[corner].radius
+		- border_width * (2.0 - sqrt(2.0));
+	return MAX((int)ceil(inset), 0);
 }
 
 void
