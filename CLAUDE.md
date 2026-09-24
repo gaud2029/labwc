@@ -31,6 +31,30 @@ corner on its own. The title and outermost buttons start past the cut
   resolved from the `cornerRadius`/`cornerStyle` shorthands in
   `post_processing()` of `src/config/rcxml.c`
 
+## vertical-titlebar (branch `vertical-titlebar`, on top of `angled-corner`)
+
+`<action name="SetTitlebarPosition" position="top|left|right"/>` moves one
+window's titlebar to a side (`view->titlebar_position`, copied into
+`ssd->titlebar.position` when the SSD is created; changing it recreates the
+SSD). The client-menu gets a "Titlebar" sub-menu (`client-titlebar-menu`).
+- The titlebar is still laid out as if it were at the top; `place()` in
+  `src/ssd/ssd-titlebar.c` maps that onto the side, and the bar, corners
+  and title are rotated with `wlr_scene_buffer_set_transform()` (left:
+  270, text reads upwards; right: 90, downwards). Button icons stay
+  upright. `scaled_buffer_set_transform()` keeps the rotated title's size
+  right across re-renders.
+- `ssd_thickness()` / `ssd_titlebar_thickness()` in `src/ssd/ssd.c` give the
+  titlebar's room per side; borders, extents and shadow use the latter.
+- Views with a side titlebar can't be shaded (`view_set_shade()`).
+
+Headless test (no nested window needed), with window rules running the
+action on map and grim for screenshots:
+
+    env -u WAYLAND_DISPLAY WLR_BACKENDS=headless WLR_RENDERER=pixman \
+        WLR_HEADLESS_OUTPUTS=1 WLR_LIBINPUT_NO_DEVICES=1 \
+        ./build/labwc -d -C <dir> 2>log
+    WAYLAND_DISPLAY=wayland-N grim shot.png
+
 ## Build
     meson setup build        # once
     ninja -C build

@@ -1,10 +1,10 @@
-# Local build of the labwc fork (snap-to-grid, angled corners); replaces the
+# Local build of the labwc fork (snap-to-grid, angled corners, side titlebars); replaces the
 # distro labwc. Builds whatever branch is checked out.
 # Usage: cd dev/pkg && makepkg -si     Revert: sudo pacman -S labwc
 pkgname=labwc-snapgrid
 pkgver=0.20.2
-pkgrel=2
-pkgdesc='labwc with snap-to-grid and angled titlebar corners'
+pkgrel=3
+pkgdesc='labwc with snap-to-grid, angled titlebar corners and side titlebars'
 arch=('x86_64')
 url='https://github.com/labwc/labwc'
 license=('GPL-2.0-only')
