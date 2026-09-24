@@ -45,7 +45,9 @@ SSD). The client-menu gets a "Titlebar" sub-menu (`client-titlebar-menu`).
   right across re-renders.
 - `ssd_thickness()` / `ssd_titlebar_thickness()` in `src/ssd/ssd.c` give the
   titlebar's room per side; borders, extents and shadow use the latter.
-- Views with a side titlebar can't be shaded (`view_set_shade()`).
+- A shaded view with a side titlebar rolls up sideways:
+  `view_effective_width()` is 0 instead of `view_effective_height()`
+  (see `src/view.c`); use both wherever the view's size matters.
 
 Headless test (no nested window needed), with window rules running the
 action on map and grim for screenshots:

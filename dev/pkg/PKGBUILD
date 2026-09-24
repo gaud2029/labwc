@@ -3,7 +3,7 @@
 # Usage: cd dev/pkg && makepkg -si     Revert: sudo pacman -S labwc
 pkgname=labwc-snapgrid
 pkgver=0.20.2
-pkgrel=3
+pkgrel=4
 pkgdesc='labwc with snap-to-grid, angled titlebar corners and side titlebars'
 arch=('x86_64')
 url='https://github.com/labwc/labwc'
