@@ -42,25 +42,65 @@ ssd_thickness(struct view *view)
 
 	struct theme *theme = rc.theme;
 
-	if (view->maximized == VIEW_AXIS_BOTH) {
-		struct border thickness = { 0 };
-		if (view_titlebar_visible(view)) {
-			thickness.top += theme->titlebar_height;
-		}
-		return thickness;
+	struct border thickness = { 0 };
+	if (view->maximized != VIEW_AXIS_BOTH) {
+		thickness = (struct border){
+			.top = theme->border_width,
+			.right = theme->border_width,
+			.bottom = theme->border_width,
+			.left = theme->border_width,
+		};
 	}
 
-	struct border thickness = {
-		.top = theme->titlebar_height + theme->border_width,
-		.right = theme->border_width,
-		.bottom = theme->border_width,
-		.left = theme->border_width,
-	};
-
-	if (!view_titlebar_visible(view)) {
-		thickness.top -= theme->titlebar_height;
+	if (view_titlebar_visible(view)) {
+		switch (view->titlebar_position) {
+		case LAB_TITLEBAR_LEFT:
+			thickness.left += theme->titlebar_height;
+			break;
+		case LAB_TITLEBAR_RIGHT:
+			thickness.right += theme->titlebar_height;
+			break;
+		default:
+			thickness.top += theme->titlebar_height;
+			break;
+		}
 	}
 	return thickness;
+}
+
+struct border
+ssd_titlebar_thickness(const struct ssd *ssd)
+{
+	struct border thickness = { 0 };
+	switch (ssd->titlebar.position) {
+	case LAB_TITLEBAR_LEFT:
+		thickness.left = ssd->titlebar.height;
+		break;
+	case LAB_TITLEBAR_RIGHT:
+		thickness.right = ssd->titlebar.height;
+		break;
+	default:
+		thickness.top = ssd->titlebar.height;
+		break;
+	}
+	return thickness;
+}
+
+enum lab_titlebar_position
+ssd_titlebar_position_parse(const char *position)
+{
+	if (!position) {
+		return LAB_TITLEBAR_INVALID;
+	}
+	if (!strcasecmp(position, "top")) {
+		return LAB_TITLEBAR_TOP;
+	} else if (!strcasecmp(position, "left")) {
+		return LAB_TITLEBAR_LEFT;
+	} else if (!strcasecmp(position, "right")) {
+		return LAB_TITLEBAR_RIGHT;
+	} else {
+		return LAB_TITLEBAR_INVALID;
+	}
 }
 
 struct wlr_box
@@ -102,9 +142,11 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 
 	if (view_titlebar_visible(view)) {
 		/* If the titlebar is visible, consider it part of the view */
-		int titlebar_height = rc.theme->titlebar_height;
-		view_box.y -= titlebar_height;
-		view_box.height += titlebar_height;
+		struct border titlebar = ssd_titlebar_thickness(ssd);
+		view_box.x -= titlebar.left;
+		view_box.y -= titlebar.top;
+		view_box.width += titlebar.left + titlebar.right;
+		view_box.height += titlebar.top;
 	}
 
 	if (wlr_box_contains_point(&view_box, cursor->x, cursor->y)) {
@@ -158,6 +200,7 @@ ssd_create(struct view *view, bool active)
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = rc.theme->titlebar_height;
+	ssd->titlebar.position = view->titlebar_position;
 	ssd_shadow_create(ssd);
 	ssd_extents_create(ssd);
 	/*

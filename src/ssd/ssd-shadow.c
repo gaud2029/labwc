@@ -146,9 +146,13 @@ set_shadow_geometry(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
 	struct theme *theme = rc.theme;
-	int titlebar_height = ssd->titlebar.height;
-	int width = view->current.width;
+	struct border titlebar = ssd_titlebar_thickness(ssd);
+	int titlebar_height = titlebar.top;
+	int width = view->current.width + titlebar.left + titlebar.right;
 	int height = view_effective_height(view, false) + titlebar_height;
+
+	/* A titlebar on the left pushes the whole shadow out to the left */
+	wlr_scene_node_set_position(&ssd->shadow.tree->node, -titlebar.left, 0);
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {

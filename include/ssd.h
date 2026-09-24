@@ -66,6 +66,7 @@ void ssd_button_free(struct ssd_button *button);
 enum lab_node_type ssd_get_resizing_type(const struct ssd *ssd,
 	struct wlr_cursor *cursor);
 enum lab_ssd_mode ssd_mode_parse(const char *mode);
+enum lab_titlebar_position ssd_titlebar_position_parse(const char *position);
 
 /* TODO: clean up / update */
 struct border ssd_thickness(struct view *view);

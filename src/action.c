@@ -95,6 +95,7 @@ struct action_arg_list {
 	X(TOGGLE_FULLSCREEN, "ToggleFullscreen") \
 	X(SET_DECORATIONS, "SetDecorations") \
 	X(TOGGLE_DECORATIONS, "ToggleDecorations") \
+	X(SET_TITLEBAR_POSITION, "SetTitlebarPosition") \
 	X(TOGGLE_ALWAYS_ON_TOP, "ToggleAlwaysOnTop") \
 	X(TOGGLE_ALWAYS_ON_BOTTOM, "ToggleAlwaysOnBottom") \
 	X(TOGGLE_OMNIPRESENT, "ToggleOmnipresent") \
@@ -410,6 +411,19 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			goto cleanup;
 		}
 		break;
+	case ACTION_TYPE_SET_TITLEBAR_POSITION:
+		if (!strcmp(argument, "position")) {
+			enum lab_titlebar_position position =
+				ssd_titlebar_position_parse(content);
+			if (position != LAB_TITLEBAR_INVALID) {
+				action_arg_add_int(action, argument, position);
+			} else {
+				nag_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
+					action_names[action->type], argument, content);
+			}
+			goto cleanup;
+		}
+		break;
 	case ACTION_TYPE_SET_DECORATIONS:
 		if (!strcmp(argument, "decorations")) {
 			enum lab_ssd_mode mode = ssd_mode_parse(content);
@@ -644,6 +658,10 @@ action_is_valid(struct action *action)
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		arg_name = "menu";
+		break;
+	case ACTION_TYPE_SET_TITLEBAR_POSITION:
+		arg_name = "position";
+		arg_type = LAB_ACTION_ARG_INT;
 		break;
 	case ACTION_TYPE_GO_TO_DESKTOP:
 	case ACTION_TYPE_SEND_TO_DESKTOP:
@@ -1214,6 +1232,12 @@ run_action(struct view *view, struct action *action,
 	case ACTION_TYPE_TOGGLE_DECORATIONS:
 		if (view) {
 			view_toggle_decorations(view);
+		}
+		break;
+	case ACTION_TYPE_SET_TITLEBAR_POSITION:
+		if (view) {
+			view_set_titlebar_position(view, action_get_int(action,
+				"position", LAB_TITLEBAR_TOP));
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_ALWAYS_ON_TOP:

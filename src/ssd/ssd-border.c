@@ -10,6 +10,112 @@
 #include "theme.h"
 #include "view.h"
 
+/*
+ * Size and place the border rects around the view and its titlebar.
+ *
+ * Non-tiled (partial border, rounded corners), titlebar at the top:
+ *    _____________
+ *   o           oox
+ *  |---------------|
+ *  |_______________|
+ *
+ * With the titlebar on a side, the corners sit at both ends of the bar and
+ * it's the side border that stops short of them, e.g. on the left:
+ *    ______________
+ *   /x|            |
+ *  |o |            |
+ *  |  |            |
+ *   \_|____________|
+ *
+ * Tiled (full border, squared corners):
+ *   _______________
+ *  |o           oox|
+ *  |---------------|
+ *  |_______________|
+ *
+ * Tiled or non-tiled with zero title height (full boarder, no title):
+ *   _______________
+ *  |_______________|
+ */
+static void
+set_border_geometry(struct ssd *ssd)
+{
+	struct view *view = ssd->view;
+	struct theme *theme = rc.theme;
+
+	int bw = theme->border_width;
+	int width = view->current.width;
+	int height = view_effective_height(view, /* use_pending */ false);
+	int corner_width = ssd_get_corner_width();
+	struct border titlebar = ssd_titlebar_thickness(ssd);
+
+	/* The view plus its titlebar, in view coordinates */
+	struct wlr_box inner = {
+		.x = -titlebar.left,
+		.y = -titlebar.top,
+		.width = width + titlebar.left + titlebar.right,
+		.height = height + titlebar.top,
+	};
+
+	/* Full border by default */
+	struct wlr_box left = { inner.x - bw, inner.y, bw, inner.height };
+	struct wlr_box right = { inner.x + inner.width, inner.y, bw, inner.height };
+	struct wlr_box top = { inner.x - bw, inner.y - bw, inner.width + 2 * bw, bw };
+	struct wlr_box bottom = { inner.x - bw, height, inner.width + 2 * bw, bw };
+
+	/* Leave room for the corner buffers at both ends of the titlebar */
+	if (ssd->titlebar.height > 0 && !ssd->state.was_squared) {
+		switch (ssd->titlebar.position) {
+		case LAB_TITLEBAR_LEFT:
+			left.y = corner_width;
+			left.height = height - 2 * corner_width;
+			top.x = 0;
+			bottom.x = 0;
+			top.width = width + bw;
+			bottom.width = width + bw;
+			break;
+		case LAB_TITLEBAR_RIGHT:
+			right.y = corner_width;
+			right.height = height - 2 * corner_width;
+			top.x = -bw;
+			bottom.x = -bw;
+			top.width = width + bw;
+			bottom.width = width + bw;
+			break;
+		default:
+			top.x = corner_width;
+			top.width = width - 2 * corner_width;
+			left.y = 0;
+			right.y = 0;
+			left.height = height;
+			right.height = height;
+			break;
+		}
+	}
+
+	/* The border tree is offset by -border_width */
+	struct wlr_box *boxes[] = { &left, &right, &top, &bottom };
+	for (size_t i = 0; i < ARRAY_SIZE(boxes); i++) {
+		boxes[i]->x += bw;
+		boxes[i]->width = MAX(boxes[i]->width, 0);
+		boxes[i]->height = MAX(boxes[i]->height, 0);
+	}
+
+	enum ssd_active_state active;
+	FOR_EACH_ACTIVE_STATE(active) {
+		struct ssd_border_subtree *subtree = &ssd->border.subtrees[active];
+		struct wlr_scene_rect *rects[] = {
+			subtree->left, subtree->right, subtree->top, subtree->bottom
+		};
+		for (size_t i = 0; i < ARRAY_SIZE(rects); i++) {
+			wlr_scene_rect_set_size(rects[i],
+				boxes[i]->width, boxes[i]->height);
+			wlr_scene_node_set_position(&rects[i]->node,
+				boxes[i]->x, boxes[i]->y);
+		}
+	}
+}
+
 void
 ssd_border_create(struct ssd *ssd)
 {
@@ -18,10 +124,6 @@ ssd_border_create(struct ssd *ssd)
 
 	struct view *view = ssd->view;
 	struct theme *theme = rc.theme;
-	int width = view->current.width;
-	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
-	int corner_width = ssd_get_corner_width();
 
 	ssd->border.tree = lab_wlr_scene_tree_create(ssd->tree);
 	wlr_scene_node_set_position(&ssd->border.tree->node, -theme->border_width, 0);
@@ -34,38 +136,21 @@ ssd_border_create(struct ssd *ssd)
 		wlr_scene_node_set_enabled(&parent->node, active);
 		float *color = theme->window[active].border_color;
 
-		subtree->left = lab_wlr_scene_rect_create(parent,
-			theme->border_width, height, color);
-		wlr_scene_node_set_position(&subtree->left->node, 0, 0);
-
-		subtree->right = lab_wlr_scene_rect_create(parent,
-			theme->border_width, height, color);
-		wlr_scene_node_set_position(&subtree->right->node,
-			theme->border_width + width, 0);
-
-		subtree->bottom = lab_wlr_scene_rect_create(parent,
-			full_width, theme->border_width, color);
-		wlr_scene_node_set_position(&subtree->bottom->node,
-			0, height);
-
-		subtree->top = lab_wlr_scene_rect_create(parent,
-			MAX(width - 2 * corner_width, 0), theme->border_width, color);
-		wlr_scene_node_set_position(&subtree->top->node,
-			theme->border_width + corner_width,
-			-(ssd->titlebar.height + theme->border_width));
+		subtree->left = lab_wlr_scene_rect_create(parent, 0, 0, color);
+		subtree->right = lab_wlr_scene_rect_create(parent, 0, 0, color);
+		subtree->bottom = lab_wlr_scene_rect_create(parent, 0, 0, color);
+		subtree->top = lab_wlr_scene_rect_create(parent, 0, 0, color);
 	}
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
 	}
 
-	if (view->current.width > 0 && view->current.height > 0) {
-		/*
-		 * The SSD is recreated by a Reconfigure request
-		 * thus we may need to handle squared corners.
-		 */
-		ssd_border_update(ssd);
-	}
+	/*
+	 * The SSD is also recreated by a Reconfigure request, so the
+	 * corners may be squared already.
+	 */
+	set_border_geometry(ssd);
 }
 
 void
@@ -90,69 +175,7 @@ ssd_border_update(struct ssd *ssd)
 		ssd->margin = ssd_thickness(ssd->view);
 	}
 
-	struct theme *theme = rc.theme;
-
-	int width = view->current.width;
-	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
-	int corner_width = ssd_get_corner_width();
-
-	/*
-	 * From here on we have to cover the following border scenarios:
-	 * Non-tiled (partial border, rounded corners):
-	 *    _____________
-	 *   o           oox
-	 *  |---------------|
-	 *  |_______________|
-	 *
-	 * Tiled (full border, squared corners):
-	 *   _______________
-	 *  |o           oox|
-	 *  |---------------|
-	 *  |_______________|
-	 *
-	 * Tiled or non-tiled with zero title height (full boarder, no title):
-	 *   _______________
-	 *  |_______________|
-	 */
-
-	int side_height = ssd->state.was_squared
-		? height + ssd->titlebar.height
-		: height;
-	int side_y = ssd->state.was_squared
-		? -ssd->titlebar.height
-		: 0;
-	int top_width = ssd->titlebar.height <= 0 || ssd->state.was_squared
-		? full_width
-		: MAX(width - 2 * corner_width, 0);
-	int top_x = ssd->titlebar.height <= 0 || ssd->state.was_squared
-		? 0
-		: theme->border_width + corner_width;
-
-	enum ssd_active_state active;
-	FOR_EACH_ACTIVE_STATE(active) {
-		struct ssd_border_subtree *subtree = &ssd->border.subtrees[active];
-
-		wlr_scene_rect_set_size(subtree->left,
-			theme->border_width, side_height);
-		wlr_scene_node_set_position(&subtree->left->node,
-			0, side_y);
-
-		wlr_scene_rect_set_size(subtree->right,
-			theme->border_width, side_height);
-		wlr_scene_node_set_position(&subtree->right->node,
-			theme->border_width + width, side_y);
-
-		wlr_scene_rect_set_size(subtree->bottom,
-			full_width, theme->border_width);
-		wlr_scene_node_set_position(&subtree->bottom->node,
-			0, height);
-
-		wlr_scene_rect_set_size(subtree->top,
-			top_width, theme->border_width);
-		wlr_scene_node_set_position(&subtree->top->node,
-			top_x, -(ssd->titlebar.height + theme->border_width));
-	}
+	set_border_geometry(ssd);
 }
 
 void

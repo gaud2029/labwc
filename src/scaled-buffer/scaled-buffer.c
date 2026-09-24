@@ -48,6 +48,17 @@ find_cache_for_scale(struct scaled_buffer *scene_buffer, double scale)
 	return NULL;
 }
 
+/* width and height are unrotated, see scaled_buffer_set_transform() */
+static void
+set_dest_size(struct scaled_buffer *self, int width, int height)
+{
+	if (self->transform & WL_OUTPUT_TRANSFORM_90) {
+		wlr_scene_buffer_set_dest_size(self->scene_buffer, height, width);
+	} else {
+		wlr_scene_buffer_set_dest_size(self->scene_buffer, width, height);
+	}
+}
+
 static void
 _update_buffer(struct scaled_buffer *self, double scale)
 {
@@ -140,7 +151,7 @@ _update_buffer(struct scaled_buffer *self, double scale)
 
 	/* And finally update the wlr_scene_buffer itself */
 	wlr_scene_buffer_set_buffer(self->scene_buffer, cache_entry->buffer);
-	wlr_scene_buffer_set_dest_size(self->scene_buffer, self->width, self->height);
+	set_dest_size(self, self->width, self->height);
 }
 
 /* Internal event handlers */
@@ -236,7 +247,7 @@ scaled_buffer_request_update(struct scaled_buffer *self,
 	 * The buffer size set here is updated when the backing buffer is
 	 * created in _update_buffer().
 	 */
-	wlr_scene_buffer_set_dest_size(self->scene_buffer, width, height);
+	set_dest_size(self, width, height);
 	self->width = width;
 	self->height = height;
 
@@ -247,6 +258,15 @@ scaled_buffer_request_update(struct scaled_buffer *self,
 	if (self->active_scale > 0) {
 		_update_buffer(self, self->active_scale);
 	}
+}
+
+void
+scaled_buffer_set_transform(struct scaled_buffer *self,
+		enum wl_output_transform transform)
+{
+	self->transform = transform;
+	wlr_scene_buffer_set_transform(self->scene_buffer, transform);
+	set_dest_size(self, self->width, self->height);
 }
 
 void

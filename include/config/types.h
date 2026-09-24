@@ -42,6 +42,14 @@ enum lab_ssd_mode {
 	LAB_SSD_MODE_INVALID,
 };
 
+/* Window edge the titlebar sits on */
+enum lab_titlebar_position {
+	LAB_TITLEBAR_TOP = 0,
+	LAB_TITLEBAR_LEFT,
+	LAB_TITLEBAR_RIGHT,
+	LAB_TITLEBAR_INVALID,
+};
+
 enum lab_tristate {
 	LAB_STATE_UNSPECIFIED = 0,
 	LAB_STATE_ENABLED,

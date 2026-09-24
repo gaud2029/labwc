@@ -3,6 +3,7 @@
 #define LABWC_SCALED_BUFFER_H
 
 #include <wayland-server-core.h>
+#include <wayland-server-protocol.h>
 
 #define LAB_SCALED_BUFFER_MAX_CACHE 2
 
@@ -29,6 +30,7 @@ struct scaled_buffer {
 	void *data;  /* opaque user data */
 
 	/* Private */
+	enum wl_output_transform transform;
 	bool drop_buffer;
 	double active_scale;
 	/* cached wlr_buffers for each scale */
@@ -127,6 +129,15 @@ struct scaled_buffer *scaled_buffer_create(
  */
 void scaled_buffer_request_update(struct scaled_buffer *self,
 	int width, int height);
+
+/**
+ * scaled_buffer_set_transform - rotate/flip the displayed buffer
+ *
+ * width and height stay the unrotated size; the destination size of the
+ * scene buffer gets swapped for 90/270 degree rotations.
+ */
+void scaled_buffer_set_transform(struct scaled_buffer *self,
+	enum wl_output_transform transform);
 
 /**
  * scaled_buffer_invalidate_sharing - clear the list of entire cached

@@ -94,9 +94,15 @@ struct ssd {
 		struct wlr_scene_rect *top, *bottom, *left, *right;
 	} extents;
 
-	/* The top of the view, containing buttons, title, .. */
+	/* The top (or left/right) of the view, containing buttons, title, .. */
 	struct ssd_titlebar_scene {
+		/*
+		 * Thickness across the bar (0 when hidden): a height at the
+		 * top, a width on the left/right side.
+		 */
 		int height;
+		/* Copied from view->titlebar_position when the SSD is created */
+		enum lab_titlebar_position position;
 		struct wlr_scene_tree *tree;
 		struct ssd_titlebar_subtree {
 			struct wlr_scene_tree *tree;
@@ -173,6 +179,8 @@ void ssd_titlebar_create(struct ssd *ssd);
 void ssd_titlebar_update(struct ssd *ssd);
 void ssd_titlebar_destroy(struct ssd *ssd);
 bool ssd_should_be_squared(struct ssd *ssd);
+/* Room the (visible) titlebar takes on each side of the view */
+struct border ssd_titlebar_thickness(const struct ssd *ssd);
 
 void ssd_border_create(struct ssd *ssd);
 void ssd_border_update(struct ssd *ssd);

@@ -1017,6 +1017,31 @@ init_rootmenu(void)
 	}
 }
 
+/* Where the titlebar goes, for the default client-menu */
+static struct menu *
+init_titlebar_menu(struct menu *parent)
+{
+	struct menu *menu = menu_get_by_id("client-titlebar-menu");
+	if (menu) {
+		return menu;
+	}
+	menu = menu_create(parent, "client-titlebar-menu", _("Titlebar"));
+
+	struct menuitem *item = item_create(menu, _("Top"), NULL, false);
+	struct action *action = item_add_action(item, "SetTitlebarPosition");
+	action_arg_from_xml_node(action, "position", "top");
+
+	item = item_create(menu, _("Left"), NULL, false);
+	action = item_add_action(item, "SetTitlebarPosition");
+	action_arg_from_xml_node(action, "position", "left");
+
+	item = item_create(menu, _("Right"), NULL, false);
+	action = item_add_action(item, "SetTitlebarPosition");
+	action_arg_from_xml_node(action, "position", "right");
+
+	return menu;
+}
+
 static void
 init_windowmenu(void)
 {
@@ -1038,6 +1063,10 @@ init_windowmenu(void)
 		item_add_action(item, "ToggleDecorations");
 		item = item_create(menu, _("Always on Top"), NULL, false);
 		item_add_action(item, "ToggleAlwaysOnTop");
+
+		/* Titlebar sub-menu */
+		item = item_create(menu, _("Titlebar"), NULL, true);
+		item->submenu = init_titlebar_menu(menu);
 
 		/* Workspace sub-menu */
 		item = item_create(menu, _("Workspace"), NULL, true);

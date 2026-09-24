@@ -188,6 +188,7 @@ struct view {
 	uint64_t creation_id;
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
+	enum lab_titlebar_position titlebar_position;
 	bool shaded;
 	bool minimized;
 	bool was_minimized_by_show_desktop_action;
@@ -571,6 +572,8 @@ void view_move_to_workspace(struct view *view, struct workspace *workspace);
 bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
 void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd);
+void view_set_titlebar_position(struct view *view,
+	enum lab_titlebar_position position);
 void view_toggle_fullscreen(struct view *view);
 
 /*

@@ -1540,6 +1540,37 @@ view_toggle_decorations(struct view *view)
 }
 
 void
+view_set_titlebar_position(struct view *view,
+		enum lab_titlebar_position position)
+{
+	assert(view);
+
+	if (view->titlebar_position == position || view->fullscreen) {
+		return;
+	}
+
+	/* A side titlebar would have no length left on a shaded view */
+	if (position != LAB_TITLEBAR_TOP && view->shaded) {
+		view_set_shade(view, false);
+	}
+
+	struct border old_margin = ssd_thickness(view);
+	view->titlebar_position = position;
+	struct border new_margin = ssd_thickness(view);
+
+	view_reload_ssd(view);
+
+	if (view_is_floating(view)) {
+		/* Keep the top-left corner of the outer frame in place */
+		view_move(view,
+			view->pending.x + new_margin.left - old_margin.left,
+			view->pending.y + new_margin.top - old_margin.top);
+	} else {
+		view_apply_special_geometry(view);
+	}
+}
+
+void
 view_set_layer(struct view *view, enum view_layer layer)
 {
 	assert(view);
@@ -2420,6 +2451,11 @@ view_set_shade(struct view *view, bool shaded)
 
 	/* Views without a title-bar or SSD cannot be shaded */
 	if (shaded && (!view->ssd || !view_titlebar_visible(view))) {
+		return;
+	}
+
+	/* Nor can views with the title-bar on a side */
+	if (shaded && view->titlebar_position != LAB_TITLEBAR_TOP) {
 		return;
 	}
 
