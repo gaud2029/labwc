@@ -30,9 +30,6 @@ corner on its own. The title and outermost buttons start past the cut
 - Config: `rc.corners[]` (by `enum lab_corner`) in `include/config/rcxml.h`,
   resolved from the `cornerRadius`/`cornerStyle` shorthands in
   `post_processing()` of `src/config/rcxml.c`
-- Next: the bottom corners, with the part of the window outside the cut
-  filled in the border color (bottom borders are plain rects today, in
-  `src/ssd/ssd-border.c`).
 
 ## Build
     meson setup build        # once
