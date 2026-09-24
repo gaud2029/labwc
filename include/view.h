@@ -509,6 +509,13 @@ void view_store_natural_geometry(struct view *view);
 void view_apply_natural_geometry(struct view *view);
 
 /**
+ * view_effective_width - effective width of view, with respect to shaded state
+ * @view: view for which effective width is desired
+ * @use_pending: if false, report current width; otherwise, report pending width
+ */
+int view_effective_width(struct view *view, bool use_pending);
+
+/**
  * view_effective_height - effective height of view, with respect to shaded state
  * @view: view for which effective height is desired
  * @use_pending: if false, report current height; otherwise, report pending height

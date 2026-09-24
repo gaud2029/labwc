@@ -234,7 +234,8 @@ Actions are used in menus and keyboard/mouse bindings.
 	*position* [top|left|right] On the left the title reads upwards and
 	the buttons end up at the top; on the right it reads downwards and
 	the buttons end up at the bottom. The frame's top-left corner stays
-	in place. A window with its titlebar on a side cannot be rolled up.
+	in place. A window with its titlebar on a side rolls up sideways,
+	towards the titlebar.
 
 *<action name="ToggleFullscreen" />*
 	Toggle fullscreen state of focused window.

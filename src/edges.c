@@ -22,12 +22,20 @@ edges_for_target_geometry(struct border *edges, struct view *view,
 {
 	struct border border = ssd_get_margin(view->ssd);
 
-	/* Use the effective height to properly handle shaded views */
-	int eff_height = view->shaded ? 0 : target.height;
+	/* Use the effective size to properly handle shaded views */
+	int eff_width = target.width;
+	int eff_height = target.height;
+	if (view->shaded) {
+		if (view->titlebar_position == LAB_TITLEBAR_TOP) {
+			eff_height = 0;
+		} else {
+			eff_width = 0;
+		}
+	}
 
 	edges->left = target.x - border.left - rc.gap;
 	edges->top = target.y - border.top - rc.gap;
-	edges->right = target.x + target.width + border.right + rc.gap;
+	edges->right = target.x + eff_width + border.right + rc.gap;
 	edges->bottom = target.y + eff_height + border.bottom + rc.gap;
 }
 
@@ -414,7 +422,8 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 
 		struct border win_edges = {
 			.top = v->current.y - border.top,
-			.right = v->current.x + v->current.width + border.right,
+			.right = v->current.x + border.right
+				+ view_effective_width(v, /* use_pending */ false),
 			.bottom = v->current.y + border.bottom
 				+ view_effective_height(v, /* use_pending */ false),
 			.left = v->current.x - border.left,
@@ -507,7 +516,8 @@ edges_adjust_move_coords(struct view *view, struct border edges,
 
 	if (view_geom->x != *x) {
 		int lshift = border.left + rc.gap;
-		int rshift = border.right + rc.gap + view_geom->width;
+		int rshift = border.right + rc.gap
+			+ view_effective_width(view, use_pending);
 
 		adjust_move_coords_1d(x, edges.left, lshift,
 			edges.right, rshift, *x < view_geom->x);

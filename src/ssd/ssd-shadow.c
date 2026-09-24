@@ -148,7 +148,8 @@ set_shadow_geometry(struct ssd *ssd)
 	struct theme *theme = rc.theme;
 	struct border titlebar = ssd_titlebar_thickness(ssd);
 	int titlebar_height = titlebar.top;
-	int width = view->current.width + titlebar.left + titlebar.right;
+	int width = view_effective_width(view, false)
+		+ titlebar.left + titlebar.right;
 	int height = view_effective_height(view, false) + titlebar_height;
 
 	/* A titlebar on the left pushes the whole shadow out to the left */

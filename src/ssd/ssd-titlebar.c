@@ -77,7 +77,7 @@ set_subtree_position(struct ssd *ssd, struct wlr_scene_tree *tree)
 		break;
 	case LAB_TITLEBAR_RIGHT:
 		wlr_scene_node_set_position(&tree->node,
-			ssd->view->current.width, 0);
+			view_effective_width(ssd->view, /* use_pending */ false), 0);
 		break;
 	default:
 		wlr_scene_node_set_position(&tree->node, 0, -titlebar_height);
@@ -437,7 +437,9 @@ ssd_titlebar_update(struct ssd *ssd)
 		ssd->state.was_squared = squared;
 	}
 
-	if (ssd->state.was_shaded != view->shaded) {
+	/* A right titlebar moves in when the view rolls up sideways */
+	bool shade_changed = ssd->state.was_shaded != view->shaded;
+	if (shade_changed) {
 		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, view->shaded);
 		ssd->state.was_shaded = view->shaded;
 	}
@@ -451,7 +453,8 @@ ssd_titlebar_update(struct ssd *ssd)
 	/* A side titlebar follows the height, and the right one the width */
 	bool resized = view->current.width != ssd->state.geometry.width
 		|| (ssd->titlebar.position != LAB_TITLEBAR_TOP
-			&& view->current.height != ssd->state.geometry.height);
+			&& (view->current.height != ssd->state.geometry.height
+				|| shade_changed));
 	if (!resized && !corners_changed) {
 		return;
 	}

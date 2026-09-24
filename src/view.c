@@ -946,11 +946,24 @@ view_store_natural_geometry(struct view *view)
 }
 
 int
+view_effective_width(struct view *view, bool use_pending)
+{
+	assert(view);
+
+	/* A view with a side titlebar rolls up sideways */
+	if (view->shaded && view->titlebar_position != LAB_TITLEBAR_TOP) {
+		return 0;
+	}
+
+	return use_pending ? view->pending.width : view->current.width;
+}
+
+int
 view_effective_height(struct view *view, bool use_pending)
 {
 	assert(view);
 
-	if (view->shaded) {
+	if (view->shaded && view->titlebar_position == LAB_TITLEBAR_TOP) {
 		return 0;
 	}
 
@@ -1549,8 +1562,8 @@ view_set_titlebar_position(struct view *view,
 		return;
 	}
 
-	/* A side titlebar would have no length left on a shaded view */
-	if (position != LAB_TITLEBAR_TOP && view->shaded) {
+	/* The view rolls up towards its titlebar, so unroll it first */
+	if (view->shaded) {
 		view_set_shade(view, false);
 	}
 
@@ -1936,7 +1949,8 @@ view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windo
 		destination_x = left;
 		break;
 	case LAB_EDGE_RIGHT:
-		destination_x = right - view->pending.width;
+		destination_x = right
+			- view_effective_width(view, /* use_pending */ true);
 		break;
 	case LAB_EDGE_TOP:
 		destination_y = top;
@@ -1953,7 +1967,8 @@ view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windo
 		output_usable_area_in_layout_coords(view->output);
 
 	/* Make sure the window is appropriately in view along the x direction */
-	destination_x = shift_view_to_usable_1d(view->pending.width,
+	int eff_width = view_effective_width(view, /* use_pending */ true);
+	destination_x = shift_view_to_usable_1d(eff_width,
 		view->pending.x, original_usable.x, original_usable.width,
 		destination_x, usable.x, usable.width, margin.left, margin.right);
 
@@ -2451,11 +2466,6 @@ view_set_shade(struct view *view, bool shaded)
 
 	/* Views without a title-bar or SSD cannot be shaded */
 	if (shaded && (!view->ssd || !view_titlebar_visible(view))) {
-		return;
-	}
-
-	/* Nor can views with the title-bar on a side */
-	if (shaded && view->titlebar_position != LAB_TITLEBAR_TOP) {
 		return;
 	}
 

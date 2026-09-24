@@ -44,7 +44,7 @@ set_border_geometry(struct ssd *ssd)
 	struct theme *theme = rc.theme;
 
 	int bw = theme->border_width;
-	int width = view->current.width;
+	int width = view_effective_width(view, /* use_pending */ false);
 	int height = view_effective_height(view, /* use_pending */ false);
 	int corner_width = ssd_get_corner_width();
 	struct border titlebar = ssd_titlebar_thickness(ssd);

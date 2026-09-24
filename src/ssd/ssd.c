@@ -109,7 +109,7 @@ ssd_max_extents(struct view *view)
 	assert(view);
 	struct border border = ssd_thickness(view);
 
-	int eff_width = view->current.width;
+	int eff_width = view_effective_width(view, /* use_pending */ false);
 	int eff_height = view_effective_height(view, /* use_pending */ false);
 
 	return (struct wlr_box){
@@ -138,6 +138,7 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 	}
 
 	struct wlr_box view_box = view->current;
+	view_box.width = view_effective_width(view, /* use_pending */ false);
 	view_box.height = view_effective_height(view, /* use_pending */ false);
 
 	if (view_titlebar_visible(view)) {
@@ -280,7 +281,7 @@ ssd_update_geometry(struct ssd *ssd)
 	struct wlr_box cached = ssd->state.geometry;
 	struct wlr_box current = view->current;
 
-	int eff_width = current.width;
+	int eff_width = view_effective_width(view, /* use_pending */ false);
 	int eff_height = view_effective_height(view, /* use_pending */ false);
 
 	bool update_area = eff_width != cached.width || eff_height != cached.height;
